@@ -3,137 +3,324 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#090d16">
   <title>MoneySync — Personal Finance OS</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-  <!-- Firebase SDK Compat -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg: #090d16;
+      --panel: rgba(19, 27, 44, 0.75);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --line: rgba(255, 255, 255, 0.06);
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.35);
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.2);
+      --red: #f43f5e;
+      --red-glow: rgba(244, 63, 94, 0.2);
+      --card-bg: rgba(30, 41, 59, 0.6);
+      --input-bg: rgba(15, 23, 42, 0.8);
+      --shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+    }
+
+    body.light {
+      --bg: #f1f5f9;
+      --panel: rgba(255, 255, 255, 0.85);
+      --panel-border: rgba(0, 0, 0, 0.08);
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: rgba(0, 0, 0, 0.06);
+      --accent: #4f46e5;
+      --accent-glow: rgba(79, 70, 229, 0.2);
+      --green: #10b981;
+      --red: #e11d48;
+      --card-bg: #ffffff;
+      --input-bg: #f8fafc;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    }
+
+    * { box-sizing: border-box; transition: background 0.2s, border-color 0.2s, transform 0.2s; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Prompt', 'Plus Jakarta Sans', sans-serif;
+      padding-bottom: 90px;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-layout {
+      width: min(820px, calc(100% - 28px));
+      margin: auto;
+      padding-top: 16px;
+    }
+
+    /* Top Bar */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .brand-box { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-radius: 14px;
+      display: grid; place-items: center;
+      font-size: 20px;
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+    .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--accent); }
+    h1 { font-size: 22px; margin: 0; font-weight: 700; }
+    h2 { font-size: 17px; margin: 0; font-weight: 600; }
+
+    /* Glass Panels */
+    .glass-panel {
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+
+    /* Bento Summary Cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .bento-card {
+      background: var(--card-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card-label { font-size: 12px; color: var(--muted); display: block; font-weight: 500; }
+    .balance-num { font-size: 24px; color: var(--text); display: block; margin-top: 6px; font-weight: 700; }
+    .income-card strong { font-size: 18px; color: var(--green); display: block; margin-top: 6px; }
+    .expense-card strong { font-size: 18px; color: var(--red); display: block; margin-top: 6px; }
+
+    /* Inputs & Form */
+    input, select {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1.5px solid var(--panel-border);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+    .smart-input-group { display: flex; gap: 8px; margin-bottom: 10px; }
+    
+    /* Buttons */
+    .btn-primary-glow {
+      background: linear-gradient(135deg, var(--accent), #4f46e5);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 15px var(--accent-glow);
+      white-space: nowrap;
+    }
+    .btn-primary-glow:hover { transform: translateY(-1px); opacity: 0.95; }
+
+    .btn-secondary-glass {
+      background: var(--card-bg);
+      border: 1px solid var(--panel-border);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* Type Switch Segmented */
+    .type-switch-segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: var(--input-bg);
+      padding: 4px;
+      border-radius: 14px;
+      border: 1px solid var(--panel-border);
+      margin-bottom: 16px;
+    }
+    .type-switch-segmented input { display: none; }
+    .segment-btn {
+      display: block;
+      text-align: center;
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .type-switch-segmented input:checked + .segment-btn.expense { background: var(--red-glow); color: var(--red); }
+    .type-switch-segmented input:checked + .segment-btn.income { background: var(--green-glow); color: var(--green); }
+
+    /* Grid Layouts */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .wallet-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .wallet-card { background: var(--card-bg); border: 1px solid var(--panel-border); padding: 12px; border-radius: 12px; }
+    .wallet-name { font-size: 12px; color: var(--muted); }
+    .wallet-bal { font-size: 16px; font-weight: 700; margin-top: 4px; }
+
+    /* Transactions List */
+    .tx-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .tx-item:last-child { border-bottom: none; }
+    .tx-icon-badge {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: var(--card-bg);
+      display: grid; place-items: center;
+      font-size: 18px;
+      border: 1px solid var(--panel-border);
+    }
+    .tx-details { flex: 1; }
+    .tx-title-text { font-weight: 600; font-size: 15px; }
+    .tx-sub-text { font-size: 12px; color: var(--muted); }
+    .tx-val { font-weight: 700; font-size: 16px; }
+    .tx-val.income { color: var(--green); }
+    .tx-val.expense { color: var(--red); }
+
+    /* Bottom Navbar */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 70px;
+      background: var(--panel);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--panel-border);
+      display: flex; justify-content: space-around; align-items: center;
+      z-index: 100;
+    }
+    .nav-item {
+      background: none; border: none; color: var(--muted);
+      display: flex; flex-direction: column; align-items: center;
+      font-size: 11px; cursor: pointer; padding: 0;
+    }
+    .nav-item.active { color: var(--accent); font-weight: 600; }
+    .nav-icon { font-size: 20px; }
+    .add-tab-btn {
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      color: #fff; width: 52px; height: 52px;
+      border-radius: 50%; font-size: 28px;
+      display: grid; place-items: center;
+      margin-top: -24px;
+      box-shadow: 0 8px 20px var(--accent-glow);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .chart-container { position: relative; width: 100%; height: 210px; }
+    .hidden { display: none !important; }
+
+    @media (max-width: 640px) {
+      .summary-grid, .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
 <div class="app-layout">
 
   <!-- Top App Bar -->
   <header class="topbar">
-    <div class="brand-group">
-      <div class="eyebrow">MONEYSYNC OS</div>
-      <h1 id="pageTitle">🏠 หน้าหลัก</h1>
+    <div class="brand-box">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="eyebrow">MONEYSYNC OS</div>
+        <h1 id="pageTitle">🏠 หน้าหลัก</h1>
+      </div>
     </div>
     <div class="topbar-actions">
-      <button id="themeBtn" class="icon-btn" aria-label="เปลี่ยนธีม">☾ ธีมมืด</button>
+      <button id="themeBtn" class="btn-secondary-glass" aria-label="เปลี่ยนธีม">☾ ธีมมืด</button>
     </div>
   </header>
 
   <main class="main-content">
     
     <!-- Tab 1: Dashboard -->
-    <section id="tab-dashboard" class="tab-content active" aria-labelledby="pageTitle">
-      <div id="summaryCardContainer" class="summary-card-container">
-        <div class="cards">
-          <div class="card balance">
-            <span>ยอดเงินรวมทุกบัญชี</span>
-            <strong id="totalBalance">฿0.00</strong>
-          </div>
-          <div class="card income">
-            <span>รายรับเดือนนี้</span>
-            <strong id="incThisMonth">฿0.00</strong>
-          </div>
-          <div class="card expense">
-            <span>รายจ่ายเดือนนี้</span>
-            <strong id="expThisMonth">฿0.00</strong>
-          </div>
+    <section id="tab-dashboard" class="tab-content active">
+      
+      <!-- Summary Bento Cards -->
+      <div class="summary-grid">
+        <div class="bento-card balance-card">
+          <span class="card-label">ยอดเงินรวมทุกบัญชี</span>
+          <strong id="totalBalance" class="balance-num">฿0.00</strong>
+        </div>
+        <div class="bento-card income-card">
+          <span class="card-label">รายรับเดือนนี้</span>
+          <strong id="incThisMonth">฿0.00</strong>
+        </div>
+        <div class="bento-card expense-card">
+          <span class="card-label">รายจ่ายเดือนนี้</span>
+          <strong id="expThisMonth">฿0.00</strong>
         </div>
       </div>
 
-      <!-- Quick Add / Smart Add Input -->
-      <div class="panel smart-add-panel">
-        <div class="panel-head"><h2>⚡ Smart Quick Add</h2></div>
-        <form id="smartAddForm" class="smart-input-group" onsubmit="return false;">
-          <input id="smartInput" placeholder="พิมพ์เช่น 'ข้าว 60' หรือ 'เงินเดือน 25000'" aria-label="กรอกรายการด่วน">
-          <button id="smartAddBtn" type="button" class="primary">วิเคราะห์</button>
-        </form>
-        <p class="muted-sm">พิมพ์ชื่อรายการตามด้วยจำนวนเงิน ระบบจะจำแนกประเภทและหมวดหมู่อัตโนมัติให้คุณตรวจสอบก่อนบันทึก</p>
-
-        <!-- Preview Modal/Box for Smart Add Verification -->
-        <div id="smartPreviewBox" class="smart-preview-box hidden">
-          <div class="preview-title">🔍 ตรวจสอบรายการก่อนบันทึก</div>
-          <div class="preview-grid">
-            <label>ชื่อรายการ<input id="smartTitle" type="text" required></label>
-            <label>จำนวนเงิน<input id="smartAmount" type="number" step="0.01" min="0.01" required></label>
-            <label>ประเภท
-              <select id="smartType">
-                <option value="expense">🔴 รายจ่าย</option>
-                <option value="income">🟢 รายรับ</option>
-              </select>
-            </label>
-            <label>หมวดหมู่<select id="smartCategory"></select></label>
-            <label>บัญชีการเงิน<select id="smartWallet"></select></label>
-          </div>
-          <div class="preview-actions">
-            <button id="smartConfirmBtn" type="button" class="primary">✓ ยืนยันบันทึก</button>
-            <button id="smartCancelBtn" type="button" class="secondary">ยกเลิก</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Wallet Overview & Transfer Action -->
-      <div class="panel">
+      <!-- Smart Quick Add -->
+      <div class="glass-panel">
         <div class="panel-head">
-          <h2>💳 บัญชีการเงิน (Wallets)</h2>
-          <button id="transferModalBtn" class="secondary icon-btn-sm">🔄 โอนเงินระหว่างบัญชี</button>
+          <h2>⚡ Smart Quick Add</h2>
         </div>
-        <div id="walletList" class="wallet-grid"></div>
-
-        <!-- Transfer Form Drawer/Modal Container -->
-        <div id="transferBox" class="transfer-box hidden">
-          <h3>🔄 โอนเงินระหว่างบัญชี</h3>
-          <form id="transferForm">
-            <div class="form-grid-2">
-              <label>จากบัญชี (ต้นทาง)
-                <select id="transferFromWallet" required></select>
-              </label>
-              <label>ไปยังบัญชี (ปลายทาง)
-                <select id="transferToWallet" required></select>
-              </label>
-            </div>
-            <div class="form-grid-2">
-              <label>จำนวนเงิน (บาท)
-                <input id="transferAmount" type="number" step="0.01" min="0.01" placeholder="0.00" required>
-              </label>
-              <label>วันที่โอน
-                <input id="transferDate" type="date" required>
-              </label>
-            </div>
-            <label>บันทึกช่วยจำ
-              <input id="transferNote" type="text" placeholder="เช่น โอนเข้าบัญชีออมทรัพย์">
-            </label>
-            <div class="modal-actions">
-              <button class="primary" type="submit">ยืนยันการโอนเงิน</button>
-              <button type="button" id="closeTransferBtn" class="secondary">ยกเลิก</button>
-            </div>
-          </form>
+        <div class="smart-input-group">
+          <input id="smartInput" placeholder="พิมพ์เช่น 'ข้าว 60' หรือ 'เงินเดือน 25000'">
+          <button id="smartAddBtn" class="btn-primary-glow">เพิ่มด่วน</button>
         </div>
+        <p style="font-size: 12px; color: var(--muted); margin: 0;">พิมพ์ชื่อรายการตามด้วยจำนวนเงิน ระบบจะแยกประเภทอัตโนมัติ</p>
       </div>
 
-      <!-- Insights Summary -->
-      <div class="panel">
-        <div class="panel-head"><h2>💡 Financial Insights</h2></div>
-        <div id="dashboardInsights" class="insights-box"></div>
+      <!-- Chart & Wallets Grid -->
+      <div class="two-col">
+        <div class="glass-panel">
+          <div class="panel-head"><h2>📊 สัดส่วนรายจ่ายเดือนนี้</h2></div>
+          <div class="chart-container">
+            <canvas id="expenseChart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-panel">
+          <div class="panel-head"><h2>💳 บัญชีการเงิน</h2></div>
+          <div id="walletList" class="wallet-grid"></div>
+        </div>
       </div>
 
       <!-- Recent Transactions -->
-      <div class="panel">
+      <div class="glass-panel">
         <div class="panel-head">
           <h2>📝 รายการล่าสุด</h2>
-          <button type="button" onclick="switchTab('history')" class="link-btn">ดูทั้งหมด →</button>
+          <button onclick="switchTab('history')" class="btn-secondary-glass" style="font-size:12px;">ดูทั้งหมด →</button>
         </div>
         <div id="recentTxList"></div>
       </div>
@@ -141,217 +328,296 @@
 
     <!-- Tab 2: Add Transaction Form -->
     <section id="tab-add" class="tab-content">
-      <div class="panel">
+      <div class="glass-panel">
         <div class="panel-head"><h2 id="formTxTitle">➕ บันทึกรายการ</h2></div>
         <form id="txForm">
           <input type="hidden" id="txId">
-          <div class="type-switch" role="radiogroup" aria-label="ประเภทรายการ">
-            <label><input type="radio" name="type" value="expense" checked><span>🔴 รายจ่าย</span></label>
-            <label><input type="radio" name="type" value="income"><span>🟢 รายรับ</span></label>
+          <div class="type-switch-segmented">
+            <label><input type="radio" name="type" value="expense" checked><span class="segment-btn expense">🔴 รายจ่าย</span></label>
+            <label><input type="radio" name="type" value="income"><span class="segment-btn income">🟢 รายรับ</span></label>
           </div>
-          <label>ชื่อรายการ<input id="title" maxlength="80" placeholder="เช่น ค่าอาหาร, เงินเดือน" required></label>
-          <label>จำนวนเงิน (บาท)<input id="amount" type="number" min="0.01" step="0.01" placeholder="เช่น 100" required></label>
-          <label>หมวดหมู่<select id="category"></select></label>
-          <label>บัญชีการเงิน<select id="walletSelect"></select></label>
-          <label>วันที่ทำรายการ<input id="date" type="date" required></label>
-          <label>รายละเอียดเพิ่มเติม<input id="note" maxlength="120" placeholder="ระบุเพิ่มเติม..."></label>
-          <button class="primary" type="submit">💾 บันทึกรายการ</button>
+          <p><label>ชื่อรายการ<input id="title" maxlength="80" placeholder="เช่น ค่าอาหาร, เงินเดือน" required></label></p>
+          <p><label>จำนวนเงิน (บาท)<input id="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required></label></p>
+          <p><label>หมวดหมู่<select id="category"></select></label></p>
+          <p><label>บัญชีการเงิน<select id="walletSelect"></select></label></p>
+          <p><label>วันที่ทำรายการ<input id="date" type="date" required></label></p>
+          <p><label>รายละเอียดเพิ่มเติม<input id="note" maxlength="120" placeholder="ระบุเพิ่มเติม..."></label></p>
+          <button class="btn-primary-glow" style="width:100%; margin-top:10px;" type="submit">💾 บันทึกรายการ</button>
         </form>
       </div>
     </section>
 
     <!-- Tab 3: History -->
     <section id="tab-history" class="tab-content">
-      <div class="panel">
-        <div class="panel-head">
-          <h2>📚 ประวัติการเงิน</h2>
-          <div class="sub-nav" role="tablist">
-            <button id="viewListBtn" class="active-sub" role="tab" aria-selected="true">รายปี/เดือน</button>
-            <button id="viewCalBtn" role="tab" aria-selected="false">ปฏิทิน</button>
-          </div>
-        </div>
-
-        <!-- Year Selector & Annual Overview -->
-        <div id="historyListView">
-          <div class="year-selector-bar">
-            <span>เลือกปี:</span>
-            <select id="historyYearSelect" aria-label="เลือกปีประวัติ"></select>
-          </div>
-
-          <div id="annualOverviewCard" class="annual-summary-card"></div>
-          <div id="monthlyBreakdownList" class="monthly-breakdown-list"></div>
-        </div>
-
-        <!-- Calendar View -->
-        <div id="historyCalView" class="hidden">
-          <div class="cal-header">
-            <button id="prevCalMonth" class="icon-btn-sm">← เดือนก่อน</button>
-            <h3 id="calMonthTitle">October 2026</h3>
-            <button id="nextCalMonth" class="icon-btn-sm">เดือนถัดไป →</button>
-          </div>
-          <div class="cal-grid-header">
-            <span>อา</span><span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span>
-          </div>
-          <div id="calGrid" class="cal-grid"></div>
-          <div id="calSelectedDayTx" class="cal-day-tx" style="margin-top: 14px;"></div>
-        </div>
-      </div>
-
-      <!-- Advanced Filters & Universal Search -->
-      <div class="panel">
-        <div class="panel-head"><h2>🔍 ค้นหาและกรองข้อมูลแบบละเอียด</h2></div>
-        <div class="filter-grid">
-          <input id="searchKeyword" placeholder="🔍 ค้นหาชื่อ/โน้ต/หมวดหมู่..." aria-label="ค้นหา">
-          <select id="filterType" aria-label="กรองประเภท">
-            <option value="all">ทุกประเภท (รายรับ/รายจ่าย/โอน)</option>
-            <option value="income">🟢 รายรับ</option>
-            <option value="expense">🔴 รายจ่าย</option>
-            <option value="transfer">🔄 โอนเงิน</option>
-          </select>
-          <select id="filterCategory" aria-label="กรองหมวดหมู่"><option value="all">ทุกหมวดหมู่</option></select>
-          <select id="filterWallet" aria-label="กรองบัญชี"><option value="all">ทุกบัญชีเงิน</option></select>
-          <div class="date-range-box">
-            <input type="date" id="filterStartDate" aria-label="วันที่เริ่มต้น">
-            <span>ถึง</span>
-            <input type="date" id="filterEndDate" aria-label="วันที่สิ้นสุด">
-          </div>
-        </div>
-        <div id="filteredTxList" class="tx-list-container" style="margin-top: 14px;"></div>
+      <div class="glass-panel">
+        <div class="panel-head"><h2>📚 ประวัติการเงิน</h2></div>
+        <div id="filteredTxList"></div>
       </div>
     </section>
 
     <!-- Tab 4: Analytics -->
     <section id="tab-analytics" class="tab-content">
-      <div class="panel">
-        <div class="panel-head"><h2>📊 วิเคราะห์รายปี & เปรียบเทียบปี</h2></div>
-        <div class="year-selector-bar">
-          <label>ปีเป้าหมาย: <select id="analyticsYearSelect"></select></label>
-          <label>เปรียบเทียบกับปี: <select id="compareYearSelect"></select></label>
-        </div>
-        <div id="comparisonReport" class="comparison-card" style="margin-top: 12px;"></div>
+      <div class="glass-panel">
+        <div class="panel-head"><h2>📊 สรุปการเงิน</h2></div>
+        <div id="dashboardInsights"></div>
       </div>
     </section>
 
     <!-- Tab 5: Settings -->
     <section id="tab-settings" class="tab-content">
-      
-      <!-- Cloud Sync & Authentication (Firebase) -->
-      <div class="panel">
-        <div class="panel-head"><h2>☁️ Cloud Sync & Authentication</h2></div>
-        <div class="sync-status-box">
-          <div id="authStatusText">👤 สถานะผู้ใช้: ไม่ได้เข้าสู่ระบบ (Guest / Local Mode)</div>
-          <div id="syncStatusText" style="margin-top: 4px;">สถานะการซิงค์: 🟡 ออฟไลน์ (บันทึกในเครื่อง)</div>
-          <small class="muted-sm">เข้าสู่ระบบเพื่อความปลอดภัยและการซิงค์ข้อมูลระหว่างอุปกรณ์อย่างสมบูรณ์</small>
-        </div>
-
-        <!-- Anonymous / Email Login controls -->
-        <div id="authControls" style="margin-top: 12px; display: grid; gap: 8px;">
-          <div id="loggedOutView" style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button id="loginAnonBtn" type="button" class="secondary" style="flex:1;">🔑 เข้าใช้แบบไม่ระบุตัวตน (Anonymous)</button>
-          </div>
-          <div id="loggedInView" class="hidden" style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button id="logoutBtn" type="button" class="secondary delete" style="flex:1;">🚪 ออกจากระบบ</button>
-          </div>
-        </div>
-
-        <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
-          <button id="syncNowBtn" type="button" class="primary" style="flex:1;">🔄 ซิงค์ข้อมูลเดี๋ยวนี้</button>
-          <button id="pullCloudBtn" type="button" class="secondary" style="flex:1;">📥 ดึงข้อมูลล่าสุดจาก Cloud</button>
-        </div>
-      </div>
-
-      <!-- Wallet Initial Balance Setup -->
-      <div class="panel">
-        <div class="panel-head"><h2>⚙️ ยอดเงินตั้งต้นบัญชี (Initial Balance)</h2></div>
-        <div id="walletInitialList" class="wallet-initial-list"></div>
-      </div>
-
-      <!-- Budget Management -->
-      <div class="panel">
-        <div class="panel-head"><h2>💰 จัดการงบประมาณ (Budget)</h2></div>
-        <form id="budgetForm" class="row-form">
-          <select id="budgetCategorySelect" aria-label="เลือกหมวดหมู่ตั้งงบ"></select>
-          <input type="number" id="budgetAmount" placeholder="งบประมาณ (บาท)" min="1" step="0.01" required>
-          <button class="primary" type="submit">ตั้งงบ</button>
-        </form>
-        <div id="budgetProgressList" class="budget-list" style="margin-top: 14px;"></div>
-      </div>
-
-      <!-- Financial Goals -->
-      <div class="panel">
-        <div class="panel-head"><h2>🎯 เป้าหมายการเงิน (Goals)</h2></div>
-        <form id="goalForm">
-          <label>ชื่อเป้าหมาย<input id="goalTitle" placeholder="เช่น ซื้อรถ, เงินสำรอง" required></label>
-          <label>จำนวนเงินเป้าหมาย<input id="goalTarget" type="number" min="1" step="0.01" required></label>
-          <label>เก็บได้แล้ว<input id="goalCurrent" type="number" min="0" step="0.01" value="0"></label>
-          <label>วันสิ้นสุดเป้าหมาย<input id="goalDeadline" type="date" required></label>
-          <button class="primary" type="submit">สร้างเป้าหมาย</button>
-        </form>
-        <div id="goalsList" class="goals-grid" style="margin-top: 14px;"></div>
-      </div>
-
-      <!-- Recurring Transactions -->
-      <div class="panel">
-        <div class="panel-head"><h2>🔄 รายการประจำ (Recurring)</h2></div>
-        <form id="recurringForm">
-          <label>ชื่อรายการ<input id="recTitle" placeholder="เช่น Netflix, ค่าเช่าห้อง" required></label>
-          <label>จำนวนเงิน<input id="recAmount" type="number" min="0.01" step="0.01" placeholder="จำนวนเงิน" required></label>
-          <label>ประเภท<select id="recType"><option value="expense">รายจ่าย</option><option value="income">รายรับ</option></select></label>
-          <label>หมวดหมู่<select id="recCategory"></select></label>
-          <label>บัญชีการเงิน<select id="recWallet"></select></label>
-          <label>จ่ายทุกวันที่: <input id="recDay" type="number" min="1" max="31" value="15" required></label>
-          <button class="primary" type="submit">เพิ่มรายการประจำ</button>
-        </form>
-        <div id="recurringList" style="margin-top: 14px;"></div>
-      </div>
-
-      <!-- Data Management & Backup -->
-      <div class="panel">
-        <div class="panel-head"><h2>🛡️ สำรองข้อมูล & ความปลอดภัย</h2></div>
-        <div class="backup-actions">
-          <button id="exportJsonBtn" type="button" class="secondary">📥 Export JSON Backup</button>
-          <button id="exportCsvBtn" type="button" class="secondary">📄 Export CSV (Excel)</button>
-          <label class="file-upload-btn secondary">
-            📤 Import JSON
-            <input type="file" id="importJsonInput" accept=".json" style="display:none">
-          </label>
-        </div>
+      <div class="glass-panel">
+        <div class="panel-head"><h2>⚙️ ตั้งค่าระบบ</h2></div>
+        <button id="exportJsonBtn" class="btn-secondary-glass">📥 Export Backup (JSON)</button>
       </div>
     </section>
 
   </main>
 
-  <!-- Bottom Navigation Bar for Mobile UI -->
-  <nav class="bottom-nav" aria-label="แถบเมนูหลัก">
-    <button type="button" class="nav-item active" data-tab="dashboard">
-      <span class="nav-icon" aria-hidden="true">🏠</span>
-      <span class="nav-label">หน้าแรก</span>
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="dashboard">
+      <span class="nav-icon">🏠</span>
+      <span>หน้าแรก</span>
     </button>
-    <button type="button" class="nav-item" data-tab="history">
-      <span class="nav-icon" aria-hidden="true">📚</span>
-      <span class="nav-label">ประวัติ</span>
+    <button class="nav-item" data-tab="history">
+      <span class="nav-icon">📚</span>
+      <span>ประวัติ</span>
     </button>
-    <button type="button" class="nav-item add-tab-btn" data-tab="add" aria-label="เพิ่มรายการ">
-      <span class="nav-icon" aria-hidden="true">+</span>
+    <button class="nav-item add-tab-btn" data-tab="add">
+      <span class="nav-icon">+</span>
     </button>
-    <button type="button" class="nav-item" data-tab="analytics">
-      <span class="nav-icon" aria-hidden="true">📊</span>
-      <span class="nav-label">วิเคราะห์</span>
+    <button class="nav-item" data-tab="analytics">
+      <span class="nav-icon">📊</span>
+      <span>วิเคราะห์</span>
     </button>
-    <button type="button" class="nav-item" data-tab="settings">
-      <span class="nav-icon" aria-hidden="true">⚙️</span>
-      <span class="nav-label">ตั้งค่า</span>
+    <button class="nav-item" data-tab="settings">
+      <span class="nav-icon">⚙️</span>
+      <span>ตั้งค่า</span>
     </button>
   </nav>
 
 </div>
 
-<!-- Toast Notification with Undo -->
-<div id="toast" class="toast" role="alert" aria-live="assertive">
-  <span id="toastMsg"></span>
-  <button id="undoBtn" type="button" class="undo-btn hidden">ย้อนกลับ (Undo)</button>
-</div>
+<script>
+  const KEY_V2 = "moneysync.os.v2";
+  const CATEGORIES = {
+    expense: ['🍚 อาหาร', '🚗 เดินทาง', '🛒 ของใช้', '🎬 ความบันเทิง', '💳 บิล/อินเทอร์เน็ต', '🛍️ ช้อปปิ้ง', '🏥 สุขภาพ', '🎁 อื่น ๆ'],
+    income: ['💼 เงินเดือน', '📈 ลงทุน/ปันผล', '🏷️ รายได้เสริม', '💵 อื่น ๆ']
+  };
 
-<script src="app.js"></script>
+  let store = loadStore();
+  let chartInstance = null;
+
+  const $ = id => document.getElementById(id);
+  const money = n => new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(Number(n) || 0);
+
+  function loadStore() {
+    const v2Raw = localStorage.getItem(KEY_V2);
+    if (v2Raw) {
+      try { return JSON.parse(v2Raw); } catch (e) { console.error(e); }
+    }
+    return {
+      wallets: [
+        { id: "w_cash", name: "💵 เงินสด" },
+        { id: "w_bank", name: "🏦 ธนาคาร" },
+        { id: "w_card", name: "💳 บัตรเครดิต" }
+      ],
+      transactions: []
+    };
+  }
+
+  function saveStore() {
+    localStorage.setItem(KEY_V2, JSON.stringify(store));
+    renderAll();
+  }
+
+  function switchTab(tabId) {
+    document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+    document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+    
+    const target = $(`tab-${tabId}`);
+    if (target) target.classList.add("active");
+    
+    const navBtn = document.querySelector(`.nav-item[data-tab="${tabId}"]`);
+    if (navBtn) navBtn.classList.add("active");
+
+    renderAll();
+  }
+
+  function parseSmartAdd(text) {
+    const parts = text.trim().split(/\s+/);
+    if (parts.length < 2) return null;
+
+    const amount = parseFloat(parts[parts.length - 1]);
+    if (isNaN(amount)) return null;
+
+    const title = parts.slice(0, -1).join(" ");
+    let type = "expense";
+    let category = "🎁 อื่น ๆ";
+
+    if (/เงินเดือน|โบนัส|ปันผล|ขาย/.test(title)) {
+      type = "income";
+      category = "💼 เงินเดือน";
+    } else if (/ข้าว|ชา|กาแฟ|ก๋วยเตี๋ยว|อาหาร|ชาบู/.test(title)) {
+      category = "🍚 อาหาร";
+    } else if (/รถ|น้ำมัน|BTS|Grab|แท็กซี่/.test(title)) {
+      category = "🚗 เดินทาง";
+    }
+
+    return {
+      id: crypto.randomUUID(),
+      type,
+      amount,
+      title,
+      category,
+      walletId: "w_cash",
+      date: new Date().toISOString().slice(0, 10),
+      note: "Smart Quick Add",
+      createdAt: Date.now()
+    };
+  }
+
+  function renderDashboard() {
+    const now = new Date();
+    const thisMK = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    const curTx = store.transactions.filter(r => r.date.startsWith(thisMK));
+    const inc = curTx.filter(r => r.type === "income").reduce((a, b) => a + b.amount, 0);
+    const exp = curTx.filter(r => r.type === "expense").reduce((a, b) => a + b.amount, 0);
+
+    const totalInc = store.transactions.filter(r => r.type === "income").reduce((a, b) => a + b.amount, 0);
+    const totalExp = store.transactions.filter(r => r.type === "expense").reduce((a, b) => a + b.amount, 0);
+
+    $("totalBalance").textContent = money(totalInc - totalExp);
+    $("incThisMonth").textContent = money(inc);
+    $("expThisMonth").textContent = money(exp);
+
+    $("walletList").innerHTML = store.wallets.map(w => {
+      const wTx = store.transactions.filter(r => r.walletId === w.id);
+      const wBal = wTx.reduce((acc, r) => acc + (r.type === "income" ? r.amount : -r.amount), 0);
+      return `<div class="wallet-card">
+        <div class="wallet-name">${w.name}</div>
+        <div class="wallet-bal">${money(wBal)}</div>
+      </div>`;
+    }).join("");
+
+    renderChart(curTx.filter(r => r.type === "expense"));
+
+    const recent = [...store.transactions].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
+    $("recentTxList").innerHTML = recent.length ? recent.map(txHtml).join("") : `<p style="color:var(--muted); font-size:13px;">ยังไม่มีรายการบันทึก</p>`;
+  }
+
+  function renderChart(expenses) {
+    const ctx = $("expenseChart")?.getContext("2d");
+    if (!ctx) return;
+
+    const catMap = {};
+    expenses.forEach(r => { catMap[r.category] = (catMap[r.category] || 0) + r.amount; });
+
+    const labels = Object.keys(catMap);
+    const data = Object.values(catMap);
+
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels.length ? labels : ['ไม่มีข้อมูล'],
+        datasets: [{
+          data: data.length ? data : [1],
+          backgroundColor: ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#ec4899'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { family: 'Prompt' } } } }
+      }
+    });
+  }
+
+  function txHtml(r) {
+    return `
+      <div class="tx-item">
+        <div class="tx-icon-badge">${r.type === "income" ? "🟢" : "🔴"}</div>
+        <div class="tx-details">
+          <div class="tx-title-text">${r.title}</div>
+          <div class="tx-sub-text">${r.category} • ${r.date}</div>
+        </div>
+        <div class="tx-val ${r.type}">${r.type === "income" ? "+" : "-"}${money(r.amount)}</div>
+      </div>
+    `;
+  }
+
+  function updateDropdowns() {
+    const typeEl = document.querySelector('input[name="type"]:checked');
+    const type = typeEl ? typeEl.value : "expense";
+
+    $("category").innerHTML = CATEGORIES[type].map(c => `<option value="${c}">${c}</option>`).join("");
+    $("walletSelect").innerHTML = store.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join("");
+  }
+
+  function renderAll() {
+    updateDropdowns();
+    renderDashboard();
+    
+    const allTx = [...store.transactions].sort((a, b) => b.createdAt - a.createdAt);
+    $("filteredTxList").innerHTML = allTx.length ? allTx.map(txHtml).join("") : `<p style="color:var(--muted); font-size:13px;">ไม่มีรายการ</p>`;
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if ($("date")) $("date").valueAsDate = new Date();
+
+    document.querySelectorAll(".nav-item").forEach(btn => {
+      btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+    });
+
+    $("smartAddBtn").addEventListener("click", () => {
+      const parsed = parseSmartAdd($("smartInput").value);
+      if (parsed) {
+        store.transactions.push(parsed);
+        saveStore();
+        $("smartInput").value = "";
+      } else {
+        alert("กรุณากรอกเช่น 'ค่าอาหาร 120'");
+      }
+    });
+
+    $("txForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const type = document.querySelector('input[name="type"]:checked').value;
+
+      const payload = {
+        id: crypto.randomUUID(),
+        type,
+        amount: Number($("amount").value),
+        title: $("title").value.trim(),
+        category: $("category").value,
+        walletId: $("walletSelect").value,
+        date: $("date").value,
+        note: $("note").value.trim(),
+        createdAt: Date.now()
+      };
+
+      store.transactions.push(payload);
+      saveStore();
+      e.target.reset();
+      switchTab("dashboard");
+    });
+
+    document.querySelectorAll('input[name="type"]').forEach(r => {
+      r.addEventListener("change", updateDropdowns);
+    });
+
+    $("themeBtn").addEventListener("click", () => {
+      document.body.classList.toggle("light");
+      const isLight = document.body.classList.contains("light");
+      $("themeBtn").textContent = isLight ? "☀️ ธีมสว่าง" : "☾ ธีมมืด";
+    });
+
+    renderAll();
+  });
+</script>
 </body>
 </html>
