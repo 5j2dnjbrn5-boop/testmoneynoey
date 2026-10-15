@@ -31,7 +31,7 @@ body {
   font-family: 'Prompt', system-ui, -apple-system, sans-serif;
   line-height: 1.55;
   font-size: 15px;
-  padding-bottom: 80px;
+  padding-bottom: 100px;
 }
 
 button, input, select, textarea {
@@ -142,8 +142,8 @@ h4 { font-size: 15px; margin: 0; }
 .wallet-bal { font-size: 16px; font-weight: 700; margin-top: 4px; }
 
 /* Smart Add */
-.smart-input-group { display: flex; gap: 8px; }
-.smart-input-group input { flex: 1; }
+.smart-input-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.smart-input-group input { flex: 1; min-width: 200px; }
 
 /* Form Controls */
 form { display: grid; gap: 12px; }
@@ -318,6 +318,11 @@ input, select, textarea {
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .undo-btn { background: var(--accent); border: 0; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 12px; }
 .hidden { display: none !important; }
+
+.backup-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sub-nav { display: flex; gap: 6px; }
+.sub-nav button { border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 8px; padding: 4px 12px; font-size: 13px; }
+.sub-nav button.active-sub { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 @media (max-width: 600px) {
   .cards { grid-template-columns: 1fr; }
