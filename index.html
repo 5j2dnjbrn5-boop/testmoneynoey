@@ -8,26 +8,31 @@
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+  <!-- Chart.js for Pro Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Firebase SDK Compat -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
-<body>
+<body class="dark">
 <div class="app-layout">
 
   <!-- Top App Bar -->
   <header class="topbar">
-    <div>
-      <div class="eyebrow">MONEYSYNC OS</div>
-      <h1 id="pageTitle">🏠 หน้าหลัก</h1>
+    <div class="brand-box">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="eyebrow">MONEYSYNC OS v2.5</div>
+        <h1 id="pageTitle">หน้าหลัก</h1>
+      </div>
     </div>
     <div class="topbar-actions">
-      <button id="themeBtn" class="icon-btn" aria-label="เปลี่ยนธีม">☾ เปลี่ยนเป็นธีมมืด</button>
+      <button id="themeBtn" class="icon-btn-glass" aria-label="เปลี่ยนธีม">☀️</button>
     </div>
   </header>
 
@@ -35,104 +40,138 @@
     
     <!-- Tab 1: Dashboard -->
     <section id="tab-dashboard" class="tab-content active">
-      <div id="summaryCardContainer" class="summary-card-container">
-        <div class="cards">
-          <div class="card balance">
-            <span>ยอดเงินรวมทุกบัญชี</span>
-            <strong id="totalBalance">฿0.00</strong>
-          </div>
-          <div class="card income">
-            <span>รายรับเดือนนี้</span>
-            <strong id="incThisMonth">฿0.00</strong>
-          </div>
-          <div class="card expense">
-            <span>รายจ่ายเดือนนี้</span>
-            <strong id="expThisMonth">฿0.00</strong>
-          </div>
+      
+      <!-- Balance Cards (Bento Grid) -->
+      <div class="bento-grid summary-grid">
+        <div class="card bento-card balance-card">
+          <span class="card-label">ยอดเงินรวมสุทธิ</span>
+          <strong id="totalBalance" class="balance-num">฿0.00</strong>
+          <div class="card-bg-glow"></div>
+        </div>
+        <div class="card bento-card income-card">
+          <span class="card-label">🟢 รายรับเดือนนี้</span>
+          <strong id="incThisMonth">฿0.00</strong>
+        </div>
+        <div class="card bento-card expense-card">
+          <span class="card-label">🔴 รายจ่ายเดือนนี้</span>
+          <strong id="expThisMonth">฿0.00</strong>
         </div>
       </div>
 
-      <!-- Quick Add / Smart Add Input -->
-      <div class="panel smart-add-panel">
-        <div class="panel-head"><h2>⚡ Smart Quick Add</h2></div>
+      <!-- Smart Quick Add -->
+      <div class="panel glass-panel smart-add-panel">
+        <div class="panel-head">
+          <h2>⚡ Smart Quick Add AI</h2>
+          <span class="badge-ai">NLP Engine</span>
+        </div>
         <div class="smart-input-group">
-          <input id="smartInput" placeholder="พิมพ์เช่น 'ข้าว 60' หรือ 'เงินเดือน 25000'">
-          <button id="smartAddBtn" class="primary">เพิ่ม</button>
+          <input id="smartInput" placeholder="พิมพ์เช่น 'ค่าชาบู 499' หรือ 'เงินเดือน 35000'">
+          <button id="smartAddBtn" class="btn-primary-glow">เพิ่มด่วน</button>
         </div>
-        <p class="muted-sm">พิมพ์ชื่อรายการตามด้วยจำนวนเงิน ระบบจะจำแนกประเภทและหมวดหมู่อัตโนมัติ</p>
+        <p class="muted-sm">💡 ตัวอย่าง: "ชาเขียว 65", "ค่าเน็ต 599", "ได้ปันผล 1200"</p>
       </div>
 
-      <!-- Wallet Overview -->
-      <div class="panel">
-        <div class="panel-head"><h2>💳 บัญชีการเงิน (Wallets)</h2></div>
-        <div id="walletList" class="wallet-grid"></div>
+      <!-- Chart & Wallet Grid -->
+      <div class="bento-grid two-col">
+        <!-- Expense Breakdown Chart -->
+        <div class="panel glass-panel">
+          <div class="panel-head"><h2>📊 สัดส่วนรายจ่ายเดือนนี้</h2></div>
+          <div class="chart-container">
+            <canvas id="expenseChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Wallets -->
+        <div class="panel glass-panel">
+          <div class="panel-head"><h2>💳 บัญชีการเงิน</h2></div>
+          <div id="walletList" class="wallet-grid"></div>
+        </div>
       </div>
 
-      <!-- Insights Summary -->
-      <div class="panel">
+      <!-- Financial Insights -->
+      <div class="panel glass-panel">
         <div class="panel-head"><h2>💡 Financial Insights</h2></div>
         <div id="dashboardInsights" class="insights-box"></div>
       </div>
 
       <!-- Recent Transactions -->
-      <div class="panel">
+      <div class="panel glass-panel">
         <div class="panel-head">
           <h2>📝 รายการล่าสุด</h2>
           <button onclick="switchTab('history')" class="link-btn">ดูทั้งหมด →</button>
         </div>
-        <div id="recentTxList"></div>
+        <div id="recentTxList" class="tx-list"></div>
       </div>
     </section>
 
     <!-- Tab 2: Add Transaction Form -->
     <section id="tab-add" class="tab-content">
-      <div class="panel">
-        <div class="panel-head"><h2 id="formTxTitle">➕ บันทึกรายการ</h2></div>
+      <div class="panel glass-panel form-panel">
+        <div class="panel-head"><h2 id="formTxTitle">➕ บันทึกรายการใหม่</h2></div>
         <form id="txForm">
           <input type="hidden" id="txId">
-          <div class="type-switch">
-            <label><input type="radio" name="type" value="expense" checked><span>🔴 รายจ่าย</span></label>
-            <label><input type="radio" name="type" value="income"><span>🟢 รายรับ</span></label>
+          <div class="type-switch-segmented">
+            <label>
+              <input type="radio" name="type" value="expense" checked>
+              <span class="segment-btn expense">🔴 รายจ่าย</span>
+            </label>
+            <label>
+              <input type="radio" name="type" value="income">
+              <span class="segment-btn income">🟢 รายรับ</span>
+            </label>
           </div>
-          <label>ชื่อรายการ<input id="title" maxlength="80" placeholder="เช่น ค่าอาหาร, เงินเดือน" required></label>
-          <label>จำนวนเงิน (บาท)<input id="amount" type="number" min="0.01" step="0.01" placeholder="เช่น 100" required></label>
-          <label>หมวดหมู่<select id="category"></select></label>
-          <label>บัญชีการเงิน<select id="walletSelect"></select></label>
-          <label>วันที่ทำรายการ<input id="date" type="date" required></label>
-          <label>รายละเอียดเพิ่มเติม<input id="note" maxlength="120" placeholder="ระบุเพิ่มเติม..."></label>
-          <button class="primary" type="submit">💾 บันทึกรายการ</button>
+
+          <div class="form-grid">
+            <label>ชื่อรายการ
+              <input id="title" maxlength="80" placeholder="เช่น ค่าข้าว, ค่าหอ, เงินเดือน" required>
+            </label>
+            <label>จำนวนเงิน (บาท)
+              <input id="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required>
+            </label>
+            <label>หมวดหมู่
+              <select id="category"></select>
+            </label>
+            <label>บัญชีการเงิน
+              <select id="walletSelect"></select>
+            </label>
+            <label>วันที่ทำรายการ
+              <input id="date" type="date" required>
+            </label>
+            <label>รายละเอียดเพิ่มเติม
+              <input id="note" maxlength="120" placeholder="ระบุเพิ่มเติม (ถ้ามี)...">
+            </label>
+          </div>
+
+          <button class="btn-primary-glow full-width" type="submit">💾 บันทึกรายการ</button>
         </form>
       </div>
     </section>
 
     <!-- Tab 3: History -->
     <section id="tab-history" class="tab-content">
-      <div class="panel">
+      <div class="panel glass-panel">
         <div class="panel-head">
           <h2>📚 ประวัติการเงิน</h2>
-          <div class="sub-nav">
-            <button id="viewListBtn" class="active-sub">รายปี/เดือน</button>
-            <button id="viewCalBtn">ปฏิทิน</button>
+          <div class="sub-nav-pill">
+            <button id="viewListBtn" class="pill-btn active">รายปี/เดือน</button>
+            <button id="viewCalBtn" class="pill-btn">ปฏิทิน</button>
           </div>
         </div>
 
-        <!-- Year Selector & Annual Overview -->
         <div id="historyListView">
           <div class="year-selector-bar">
             <span>เลือกปี:</span>
-            <select id="historyYearSelect"></select>
+            <select id="historyYearSelect" class="styled-select"></select>
           </div>
-
           <div id="annualOverviewCard" class="annual-summary-card"></div>
           <div id="monthlyBreakdownList" class="monthly-breakdown-list"></div>
         </div>
 
-        <!-- Calendar View -->
         <div id="historyCalView" class="hidden">
           <div class="cal-header">
-            <button id="prevCalMonth">← เดือนก่อน</button>
-            <h3 id="calMonthTitle">Month Year</h3>
-            <button id="nextCalMonth">เดือนถัดไป →</button>
+            <button id="prevCalMonth" class="icon-btn-glass">←</button>
+            <h3 id="calMonthTitle">October 2026</h3>
+            <button id="nextCalMonth" class="icon-btn-glass">→</button>
           </div>
           <div class="cal-grid-header">
             <span>อา</span><span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span>
@@ -142,101 +181,70 @@
         </div>
       </div>
 
-      <!-- Advanced Filters & Universal Search -->
-      <div class="panel">
-        <div class="panel-head"><h2>🔍 ค้นหาและกรองข้อมูลแบบละเอียด</h2></div>
+      <!-- Search & Filters -->
+      <div class="panel glass-panel">
+        <div class="panel-head"><h2>🔍 ค้นหา & กรองข้อมูล</h2></div>
         <div class="filter-grid">
-          <input id="searchKeyword" placeholder="🔍 ค้นหาชื่อ/โน้ต/หมวดหมู่...">
-          <select id="filterType">
-            <option value="all">ทุกประเภท (รายรับ/รายจ่าย)</option>
-            <option value="income">🟢 รายรับ</option>
-            <option value="expense">🔴 รายจ่าย</option>
-          </select>
-          <select id="filterCategory"><option value="all">ทุกหมวดหมู่</option></select>
-          <select id="filterWallet"><option value="all">ทุกบัญชีเงิน</option></select>
+          <input id="searchKeyword" placeholder="🔍 ค้นหาชื่อ/หมวดหมู่/บันทึก...">
+          <div class="filter-row">
+            <select id="filterType"><option value="all">ทุกประเภท</option><option value="income">🟢 รายรับ</option><option value="expense">🔴 รายจ่าย</option></select>
+            <select id="filterCategory"><option value="all">ทุกหมวดหมู่</option></select>
+            <select id="filterWallet"><option value="all">ทุกบัญชี</option></select>
+          </div>
           <div class="date-range-box">
             <input type="date" id="filterStartDate">
             <span>ถึง</span>
             <input type="date" id="filterEndDate">
           </div>
         </div>
-        <div id="filteredTxList" class="tx-list-container" style="margin-top: 14px;"></div>
+        <div id="filteredTxList" class="tx-list" style="margin-top: 14px;"></div>
       </div>
     </section>
 
     <!-- Tab 4: Analytics -->
     <section id="tab-analytics" class="tab-content">
-      <div class="panel">
-        <div class="panel-head"><h2>📊 วิเคราะห์รายปี & เปรียบเทียบปี</h2></div>
+      <div class="panel glass-panel">
+        <div class="panel-head"><h2>📊 วิเคราะห์ & เปรียบเทียบรายปี</h2></div>
         <div class="year-selector-bar">
-          <label>ปีเป้าหมาย: <select id="analyticsYearSelect"></select></label>
-          <label>เปรียบเทียบกับปี: <select id="compareYearSelect"></select></label>
+          <label>ปีเป้าหมาย: <select id="analyticsYearSelect" class="styled-select"></select></label>
+          <label>เปรียบเทียบ: <select id="compareYearSelect" class="styled-select"></select></label>
         </div>
         <div id="comparisonReport" class="comparison-card" style="margin-top: 12px;"></div>
+        <div class="chart-container" style="margin-top: 20px; height: 260px;">
+          <canvas id="yearlyCompareChart"></canvas>
+        </div>
       </div>
     </section>
 
     <!-- Tab 5: Settings -->
     <section id="tab-settings" class="tab-content">
-      
-      <!-- Cloud Sync (Firebase) -->
-      <div class="panel">
+      <div class="panel glass-panel">
         <div class="panel-head"><h2>☁️ Cloud Sync (Firebase)</h2></div>
         <div class="sync-status-box">
-          <div id="syncStatusText">สถานะ: 🟡 ใช้ข้อมูลในเครื่อง (Offline Mode)</div>
-          <small class="muted-sm">บันทึกลงเครื่องทันที และจะ Auto-Sync ไปยัง Firebase Cloud เมื่อมีการเปลี่ยนแปลงข้อมูล</small>
+          <div id="syncStatusText">สถานะ: 🟡 ออฟไลน์ (บันทึกในเครื่อง)</div>
         </div>
-        <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
-          <button id="syncNowBtn" class="primary" style="flex:1;">🔄 ซิงค์ข้อมูลเดี๋ยวนี้</button>
-          <button id="pullCloudBtn" class="secondary" style="flex:1;">📥 ดึงข้อมูลล่าสุดจาก Cloud</button>
+        <div class="btn-group-row" style="margin-top: 12px;">
+          <button id="syncNowBtn" class="btn-primary-glow">🔄 Sync ทันที</button>
+          <button id="pullCloudBtn" class="btn-secondary-glass">📥 ดึงจาก Cloud</button>
         </div>
       </div>
 
-      <!-- Budget Management -->
-      <div class="panel">
-        <div class="panel-head"><h2>💰 จัดการงบประมาณ (Budget)</h2></div>
+      <div class="panel glass-panel">
+        <div class="panel-head"><h2>🎯 งบประมาณ & เป้าหมาย</h2></div>
         <form id="budgetForm" class="row-form">
           <select id="budgetCategorySelect"></select>
           <input type="number" id="budgetAmount" placeholder="งบประมาณ (บาท)" required>
-          <button class="primary" type="submit">ตั้งงบ</button>
+          <button class="btn-primary-glow" type="submit">ตั้งงบ</button>
         </form>
         <div id="budgetProgressList" class="budget-list" style="margin-top: 14px;"></div>
       </div>
 
-      <!-- Financial Goals -->
-      <div class="panel">
-        <div class="panel-head"><h2>🎯 เป้าหมายการเงิน (Goals)</h2></div>
-        <form id="goalForm">
-          <label>ชื่อเป้าหมาย<input id="goalTitle" placeholder="เช่น ซื้อรถ, เงินสำรอง" required></label>
-          <label>จำนวนเงินเป้าหมาย<input id="goalTarget" type="number" required></label>
-          <label>เก็บได้แล้ว<input id="goalCurrent" type="number" value="0"></label>
-          <label>วันสิ้นสุดเป้าหมาย<input id="goalDeadline" type="date" required></label>
-          <button class="primary" type="submit">สร้างเป้าหมาย</button>
-        </form>
-        <div id="goalsList" class="goals-grid" style="margin-top: 14px;"></div>
-      </div>
-
-      <!-- Recurring Transactions -->
-      <div class="panel">
-        <div class="panel-head"><h2>🔄 รายการประจำ (Recurring)</h2></div>
-        <form id="recurringForm">
-          <label>ชื่อรายการ<input id="recTitle" placeholder="เช่น Netflix, ค่าเช่าห้อง" required></label>
-          <label>จำนวนเงิน<input id="recAmount" type="number" placeholder="จำนวนเงิน" required></label>
-          <label>ประเภท<select id="recType"><option value="expense">รายจ่าย</option><option value="income">รายรับ</option></select></label>
-          <label>หมวดหมู่<select id="recCategory"></select></label>
-          <label>จ่ายทุกวันที่: <input id="recDay" type="number" min="1" max="31" value="15" required></label>
-          <button class="primary" type="submit">เพิ่มรายการประจำ</button>
-        </form>
-        <div id="recurringList" style="margin-top: 14px;"></div>
-      </div>
-
-      <!-- Data Management & Backup -->
-      <div class="panel">
-        <div class="panel-head"><h2>🛡️ สำรองข้อมูล & ความปลอดภัย</h2></div>
+      <div class="panel glass-panel">
+        <div class="panel-head"><h2>🛡️ สำรอง & กู้คืนข้อมูล</h2></div>
         <div class="backup-actions">
-          <button id="exportJsonBtn" class="secondary">📥 Export JSON Backup</button>
-          <button id="exportCsvBtn" class="secondary">📄 Export CSV (Excel)</button>
-          <label class="file-upload-btn secondary">
+          <button id="exportJsonBtn" class="btn-secondary-glass">📥 Export JSON</button>
+          <button id="exportCsvBtn" class="btn-secondary-glass">📄 Export CSV</button>
+          <label class="btn-secondary-glass file-upload-label">
             📤 Import JSON
             <input type="file" id="importJsonInput" accept=".json" style="display:none">
           </label>
@@ -246,7 +254,7 @@
 
   </main>
 
-  <!-- Bottom Navigation Bar for Mobile UI -->
+  <!-- Navigation Bar -->
   <nav class="bottom-nav">
     <button class="nav-item active" data-tab="dashboard">
       <span class="nav-icon">🏠</span>
@@ -271,10 +279,9 @@
 
 </div>
 
-<!-- Toast Notification with Undo -->
 <div id="toast" class="toast">
   <span id="toastMsg"></span>
-  <button id="undoBtn" class="undo-btn hidden">ย้อนกลับ (Undo)</button>
+  <button id="undoBtn" class="undo-btn hidden">ย้อนกลับ</button>
 </div>
 
 <script src="app.js"></script>
