@@ -84,7 +84,404 @@ function loadStore() {
       }));
     } catch (e) { console.error("Migration Fail:", e); }
   }
+// วางต่อจากฟังก์ชัน parseCsvLine ให้สมบูรณ์
+  result.push(cur);
+  return result;
+}
 
+// ==================== EVENT BINDINGS ====================
+document.addEventListener("DOMContentLoaded", () => {
+  initAuth();
+
+  if ($("date")) $("date").valueAsDate = new Date();
+  if ($("transferDate")) $("transferDate").valueAsDate = new Date();
+
+  document.querySelectorAll(".nav-item").forEach(btn => {
+    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+  });
+
+  // History Tab Navigation
+  if ($("viewListBtn")) {
+    $("viewListBtn").addEventListener("click", () => {
+      $("historyListView").classList.remove("hidden");
+      $("historyCalView").classList.add("hidden");
+      $("viewListBtn").classList.add("active-sub");
+      $("viewCalBtn").classList.remove("active-sub");
+    });
+  }
+
+  if ($("viewCalBtn")) {
+    $("viewCalBtn").addEventListener("click", () => {
+      $("historyListView").classList.add("hidden");
+      $("historyCalView").classList.remove("hidden");
+      $("viewCalBtn").classList.add("active-sub");
+      $("viewListBtn").classList.remove("active-sub");
+    });
+  }
+
+  if ($("prevCalMonth")) {
+    $("prevCalMonth").addEventListener("click", () => {
+      currentCalDate.setMonth(currentCalDate.getMonth() - 1);
+      renderCalendar();
+    });
+  }
+  
+  if ($("nextCalMonth")) {
+    $("nextCalMonth").addEventListener("click", () => {
+      currentCalDate.setMonth(currentCalDate.getMonth() + 1);
+      renderCalendar();
+    });
+  }
+
+  // Transfer Money Drawer
+  if ($("transferModalBtn")) {
+    $("transferModalBtn").addEventListener("click", () => {
+      $("transferBox").classList.toggle("hidden");
+    });
+  }
+  if ($("closeTransferBtn")) {
+    $("closeTransferBtn").addEventListener("click", () => {
+      $("transferBox").classList.add("hidden");
+    });
+  }
+
+  if ($("transferForm")) {
+    $("transferForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const fromW = $("transferFromWallet").value;
+      const toW = $("transferToWallet").value;
+      const amt = Number($("transferAmount").value);
+      const date = $("transferDate").value;
+      const note = $("transferNote").value.trim();
+
+      if (fromW === toW) {
+        alert("ไม่สามารถโอนเงินไปยังบัญชีเดียวกันได้");
+        return;
+      }
+      if (amt <= 0) {
+        alert("กรุณากรอกจำนวนเงินให้ถูกต้อง");
+        return;
+      }
+
+      const payload = {
+        id: crypto.randomUUID(),
+        type: "transfer",
+        amount: amt,
+        title: "โอนเงินระหว่างบัญชี",
+        category: "🔄 โอนเงินระหว่างบัญชี",
+        walletId: fromW,
+        toWalletId: toW,
+        date: date,
+        note: note,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      store.transactions.push(payload);
+      saveStore();
+      e.target.reset();
+      if ($("transferDate")) $("transferDate").valueAsDate = new Date();
+      $("transferBox").classList.add("hidden");
+      showToast("โอนเงินเรียบร้อยแล้ว ✓");
+      renderAll();
+    });
+  }
+
+  // Smart Add Button & Preview System
+  if ($("smartAddBtn")) {
+    $("smartAddBtn").addEventListener("click", () => {
+      const parsed = parseSmartAdd($("smartInput").value);
+      if (parsed) {
+        smartParsedTemp = parsed;
+        $("smartTitle").value = parsed.title;
+        $("smartAmount").value = parsed.amount;
+        $("smartType").value = parsed.type;
+        
+        const cats = CATEGORIES[parsed.type];
+        $("smartCategory").innerHTML = cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+        $("smartCategory").value = parsed.category;
+        
+        $("smartWallet").innerHTML = store.wallets.map(w => `<option value="${w.id}">${esc(w.name)}</option>`).join("");
+        $("smartWallet").value = parsed.walletId;
+
+        $("smartPreviewBox").classList.remove("hidden");
+      } else {
+        alert("กรุณากรอกรูปแบบเช่น 'ข้าว 60' หรือ 'เงินเดือน 25000'");
+      }
+    });
+  }
+
+  if ($("smartType")) {
+    $("smartType").addEventListener("change", e => {
+      const type = e.target.value;
+      const cats = CATEGORIES[type] || CATEGORIES.expense;
+      $("smartCategory").innerHTML = cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    });
+  }
+
+  if ($("smartConfirmBtn")) {
+    $("smartConfirmBtn").addEventListener("click", () => {
+      const title = $("smartTitle").value.trim();
+      const amount = Number($("smartAmount").value);
+      if (!title || amount <= 0) {
+        alert("กรุณากรอกชื่อและจำนวนเงินให้ถูกต้อง");
+        return;
+      }
+
+      store.transactions.push({
+        id: crypto.randomUUID(),
+        title,
+        amount,
+        type: $("smartType").value,
+        category: $("smartCategory").value,
+        walletId: $("smartWallet").value,
+        date: new Date().toISOString().slice(0, 10),
+        note: "Smart Quick Add",
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      });
+
+      saveStore();
+      $("smartInput").value = "";
+      $("smartPreviewBox").classList.add("hidden");
+      showToast("บันทึกรายการสำเร็จ ✓");
+      renderAll();
+    });
+  }
+
+  if ($("smartCancelBtn")) {
+    $("smartCancelBtn").addEventListener("click", () => {
+      $("smartPreviewBox").classList.add("hidden");
+    });
+  }
+
+  // Undo Delete
+  if ($("undoBtn")) {
+    $("undoBtn").addEventListener("click", () => {
+      if (deletedTxBackup) {
+        store.transactions.splice(deletedTxBackup.index, 0, deletedTxBackup.item);
+        deletedTxBackup = null;
+        saveStore();
+        renderAll();
+        showToast("คืนค่ารายการเรียบร้อยแล้ว ✓");
+      }
+    });
+  }
+
+  // Add / Edit Transaction Form
+  if ($("txForm")) {
+    $("txForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const txId = $("txId").value;
+      const type = document.querySelector('input[name="type"]:checked').value;
+      const amt = Number($("amount").value);
+
+      if (amt <= 0) {
+        alert("กรุณากรอกจำนวนเงินที่มากกว่า 0");
+        return;
+      }
+
+      const payload = {
+        id: txId || crypto.randomUUID(),
+        type,
+        amount: amt,
+        title: $("title").value.trim(),
+        category: $("category").value,
+        walletId: $("walletSelect").value,
+        date: $("date").value,
+        note: $("note").value.trim(),
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      if (txId) {
+        const idx = store.transactions.findIndex(r => r.id === txId);
+        if (idx !== -1) store.transactions[idx] = payload;
+      } else {
+        store.transactions.push(payload);
+      }
+
+      saveStore();
+      e.target.reset();
+      $("txId").value = "";
+      if ($("date")) $("date").valueAsDate = new Date();
+      $("formTxTitle").textContent = "➕ บันทึกรายการ";
+
+      showToast("บันทึกข้อมูลเรียบร้อย ✓");
+      switchTab("dashboard");
+    });
+  }
+
+  // Budgets & Goals Forms
+  if ($("budgetForm")) {
+    $("budgetForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const cat = $("budgetCategorySelect").value;
+      const amt = Number($("budgetAmount").value);
+      
+      if (amt <= 0) return;
+
+      if (!store.budgets) store.budgets = [];
+      const existing = store.budgets.find(b => b.category === cat);
+      if (existing) existing.amount = amt;
+      else store.budgets.push({ id: crypto.randomUUID(), category: cat, amount: amt });
+
+      saveStore();
+      renderSettings();
+      showToast("ตั้งงบประมาณเรียบร้อย ✓");
+    });
+  }
+
+  if ($("goalForm")) {
+    $("goalForm").addEventListener("submit", e => {
+      e.preventDefault();
+      if (!store.goals) store.goals = [];
+      store.goals.push({
+        id: crypto.randomUUID(),
+        title: $("goalTitle").value.trim(),
+        targetAmount: Number($("goalTarget").value),
+        currentAmount: Number($("goalCurrent").value) || 0,
+        deadline: $("goalDeadline").value
+      });
+      saveStore();
+      e.target.reset();
+      renderSettings();
+      showToast("สร้างเป้าหมายเรียบร้อย ✓");
+    });
+  }
+
+  if ($("recurringForm")) {
+    $("recurringForm").addEventListener("submit", e => {
+      e.preventDefault();
+      if (!store.recurring) store.recurring = [];
+      store.recurring.push({
+        id: crypto.randomUUID(),
+        title: $("recTitle").value.trim(),
+        amount: Number($("recAmount").value),
+        type: $("recType").value,
+        category: $("recCategory").value,
+        walletId: $("recWallet").value,
+        dayOfMonth: Number($("recDay").value),
+        lastGeneratedMonth: ""
+      });
+      saveStore();
+      e.target.reset();
+      renderSettings();
+      showToast("เพิ่มรายการประจำเรียบร้อย ✓");
+    });
+  }
+
+  document.querySelectorAll('input[name="type"]').forEach(r => {
+    r.addEventListener("change", updateDropdowns);
+  });
+
+  ["searchKeyword", "filterType", "filterCategory", "filterWallet", "filterStartDate", "filterEndDate"].forEach(id => {
+    if ($(id))$(id).addEventListener("input", renderFilteredTx);
+  });
+  if ($("historyYearSelect")) $("historyYearSelect").addEventListener("change", renderHistory);
+  if ($("analyticsYearSelect")) $("analyticsYearSelect").addEventListener("change", renderAnalytics);
+  if ($("compareYearSelect")) $("compareYearSelect").addEventListener("change", renderAnalytics);
+
+  // Sync & Auth Buttons
+  if ($("loginAnonBtn")) {
+    $("loginAnonBtn").addEventListener("click", () => {
+      if (auth) {
+        auth.signInAnonymously().then(() => showToast("เข้าสู่ระบบ Anonymous สำเร็จ")).catch(err => alert(err.message));
+      }
+    });
+  }
+
+  if ($("logoutBtn")) {
+    $("logoutBtn").addEventListener("click", () => {
+      if (auth) auth.signOut().then(() => showToast("ออกจากระบบแล้ว"));
+    });
+  }
+
+  if ($("syncNowBtn")) {
+    $("syncNowBtn").addEventListener("click", () => {
+      syncToCloud();
+      showToast("ส่งข้อมูลขึ้น Cloud แล้ว ✓");
+    });
+  }
+
+  if ($("pullCloudBtn")) $("pullCloudBtn").addEventListener("click", pullFromCloud);
+
+  // Export JSON
+  if ($("exportJsonBtn")) {
+    $("exportJsonBtn").addEventListener("click", () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(store, null, 2));
+      const a = document.createElement("a");
+      a.href = dataStr;
+      a.download = `moneysync-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+    });
+  }
+
+  // Export CSV
+  if ($("exportCsvBtn")) {
+    $("exportCsvBtn").addEventListener("click", () => {
+      let csv = "ID,Type,Amount,Title,Category,Wallet,Date,Note\n";
+      store.transactions.forEach(r => {
+        const wName = (store.wallets.find(w => w.id === r.walletId) || {}).name || "";
+        csv += `${escapeCsvCell(r.id)},${escapeCsvCell(r.type)},${r.amount},${escapeCsvCell(r.title)},${escapeCsvCell(r.category)},${escapeCsvCell(wName)},${escapeCsvCell(r.date)},${escapeCsvCell(r.note)}\n`;
+      });
+      const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `moneysync-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+    });
+  }
+
+  // Import JSON
+  if ($("importJsonInput")) {
+    $("importJsonInput").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = evt => {
+        try {
+          const imported = JSON.parse(evt.target.result);
+          if (imported.transactions && Array.isArray(imported.transactions)) {
+            const existingIds = new Set(store.transactions.map(t => t.id));
+            let addedCount = 0;
+
+            imported.transactions.forEach(tx => {
+              if (!existingIds.has(tx.id)) {
+                store.transactions.push(tx);
+                existingIds.add(tx.id);
+                addedCount++;
+              }
+            });
+
+            saveStore();
+            renderAll();
+            showToast(`นำเข้าสำเร็จ (${addedCount} รายการใหม่) ✓`);
+          } else {
+            alert("ไฟล์ JSON ไม่ถูกต้องตามรูปแบบ");
+          }
+        } catch (err) { alert("อ่านไฟล์ไม่สำเร็จ"); }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  // Theme Toggle
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme === "dark") document.body.classList.add("dark");
+
+  if ($("themeBtn")) {
+    $("themeBtn").addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      const isDark = document.body.classList.contains("dark");
+      localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
+      $("themeBtn").textContent = isDark ? "☀️ ธีมสว่าง" : "☾ ธีมมืด";
+    });
+  }
+
+  renderAll();
+});
   if (!data) {
     data = {
       version: 2,
