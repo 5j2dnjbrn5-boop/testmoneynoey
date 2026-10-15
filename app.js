@@ -23,9 +23,8 @@ const firebaseConfig = {
   messagingSenderId: "350758125149",
   appId: "1:350758125149:web:539d4d90beb3e88c3497b4",
   measurementId: "G-BEKN1FH9GD",
-  databaseURL: "https://exam-planer-pro-default-rtdb.firebaseio.com"
+  databaseURL: "https://exam-planer-pro-default-rtdb.asia-southeast1.firebasedatabase.app" 
 };
-
 let db = null;
 try {
   if (typeof firebase !== "undefined") {
@@ -38,7 +37,7 @@ try {
 
 let store = loadStore();
 let deletedTxBackup = null;
-let currentCalDate = new Date(2026, 9, 1);
+let currentCalDate = new Date(); // เริ่มต้นที่เดือน/ปีปัจจุบัน
 let syncDebounceTimer = null;
 
 const $ = id => document.getElementById(id);
@@ -267,13 +266,17 @@ function parseSmartAdd(text) {
   let type = "expense";
   let category = "🎁 อื่น ๆ";
 
-  if (/เงินเดือน|รายได้|โบนัส|ขาย|ปันผล/.test(title)) {
+  if (/เงินเดือน|รายได้|โบนัส|ขาย|ปันผล|ดอกเบี้ย/.test(title)) {
     type = "income";
     category = "💼 เงินเดือน";
-  } else if (/ข้าว|อาหาร|กาแฟ|ชา|ก๋วยเตี๋ยว|ชาบู/.test(title)) {
+  } else if (/ข้าว|อาหาร|กาแฟ|ชา|ก๋วยเตี๋ยว|ชาบู|หมูกระทะ|ขนม|กะเพรา/.test(title)) {
     category = "🍚 อาหาร";
-  } else if (/รถ|เดินทาง|น้ำมัน|แท็กซี่|BTS|MRT|Grab/.test(title)) {
+  } else if (/รถ|เดินทาง|น้ำมัน|แท็กซี่|BTS|MRT|Grab|วิน/.test(title)) {
     category = "🚗 เดินทาง";
+  } else if (/เสื้อ|ช้อป|ซื้อของ|ของขวัญ/.test(title)) {
+    category = "🛍️ ช้อปปิ้ง";
+  } else if (/เน็ต|บิล|ค่าไฟ|ค่าน้ำ|โทรศัพท์/.test(title)) {
+    category = "💳 บิล/อินเทอร์เน็ต";
   }
 
   return {
@@ -357,7 +360,7 @@ function txHtml(r) {
     <div class="tx-icon">${r.type === "income" ? "🟢" : "🔴"}</div>
     <div class="tx-info">
       <div class="tx-title">${esc(r.title)}</div>
-      <div class="tx-meta">${esc(r.category)} • ${esc(wName)} • ${r.date} ${r.note ? `(${esc(r.note)})` : ''}</div>
+      <div class="tx-meta">${esc(r.category)} • ${esc(wName)} • ${esc(r.date)} ${r.note ? `(${esc(r.note)})` : ''}</div>
     </div>
     <div class="tx-amount ${r.type}">${r.type === "income" ? "+" : "−"}${money(r.amount)}</div>
     <div class="tx-actions">
@@ -417,14 +420,16 @@ window.editTx = function(id) {
 
 // ==================== HISTORY ====================
 function renderHistory() {
-  const years = [...new Set(store.transactions.map(r => r.date.slice(0, 4)))].sort((a, b) => b - a);
-  if (!years.includes("2026")) years.push("2026");
+  const currentYearStr = new Date().getFullYear().toString();
+  const years = [...new Set(store.transactions.map(r => r.date.slice(0, 4)))];
+  if (!years.includes(currentYearStr)) years.push(currentYearStr);
+  years.sort((a, b) => b - a);
 
   const yearSelect = $("historyYearSelect");
-  const curSelected = yearSelect.value || "2026";
+  const curSelected = yearSelect.value || currentYearStr;
   yearSelect.innerHTML = years.map(y => `<option value="${y}" ${y === curSelected ? "selected" : ""}>${y}</option>`).join("");
 
-  const selectedYear = yearSelect.value || "2026";
+  const selectedYear = yearSelect.value || currentYearStr;
   const yearTx = store.transactions.filter(r => r.date.startsWith(selectedYear));
   const yearInc = yearTx.filter(r => r.type === "income").reduce((a, b) => a + b.amount, 0);
   const yearExp = yearTx.filter(r => r.type === "expense").reduce((a, b) => a + b.amount, 0);
@@ -484,7 +489,7 @@ function renderFilteredTx() {
 function renderCalendar() {
   const y = currentCalDate.getFullYear();
   const m = currentCalDate.getMonth();
-  $("calMonthTitle").textContent = `${currentCalDate.toLocaleString('en', { month: 'long' })} ${y}`;
+  $("calMonthTitle").textContent = `${currentCalDate.toLocaleString('th-TH', { month: 'long' })} ${y + 543} (${y})`;
 
   const firstDay = new Date(y, m, 1).getDay();
   const daysInMonth = new Date(y, m + 1, 0).getDate();
@@ -510,19 +515,22 @@ window.selectCalDay = function(dateStr) {
   const totalExp = dayTx.filter(r => r.type === "expense").reduce((a, b) => a + b.amount, 0);
   
   $("calSelectedDayTx").innerHTML = `
-    <h4>📅 รายการวันที่ ${dateStr} (รายจ่ายรวม ${money(totalExp)})</h4>
+    <h4>📅 รายการวันที่ ${esc(dateStr)} (รายจ่ายรวม ${money(totalExp)})</h4>
     ${dayTx.length ? dayTx.map(txHtml).join("") : '<p class="muted">ไม่มีรายการในวันนี้</p>'}
   `;
 };
 
 // ==================== ANALYTICS ====================
 function renderAnalytics() {
-  const years = [...new Set(store.transactions.map(r => r.date.slice(0, 4)))].sort();
-  if (!years.includes("2025")) years.push("2025");
-  if (!years.includes("2026")) years.push("2026");
+  const currentYear = new Date().getFullYear();
+  const years = [...new Set(store.transactions.map(r => r.date.slice(0, 4)))];
+  
+  if (!years.includes(String(currentYear))) years.push(String(currentYear));
+  if (!years.includes(String(currentYear - 1))) years.push(String(currentYear - 1));
+  years.sort((a, b) => b - a);
 
-  $("analyticsYearSelect").innerHTML = years.map(y => `<option value="${y}" ${y === "2026" ? "selected" : ""}>${y}</option>`).join("");
-  $("compareYearSelect").innerHTML = years.map(y => `<option value="${y}" ${y === "2025" ? "selected" : ""}>${y}</option>`).join("");
+  $("analyticsYearSelect").innerHTML = years.map(y => `<option value="${y}" ${y === String(currentYear) ? "selected" : ""}>${y}</option>`).join("");
+  $("compareYearSelect").innerHTML = years.map(y => `<option value="${y}" ${y === String(currentYear - 1) ? "selected" : ""}>${y}</option>`).join("");
 
   const y1 = $("analyticsYearSelect").value;
   const y2 = $("compareYearSelect").value;
@@ -536,8 +544,8 @@ function renderAnalytics() {
   const diffPct = y2Exp ? (((y1Exp - y2Exp) / y2Exp) * 100).toFixed(1) : 0;
 
   $("comparisonReport").innerHTML = `
-    <h3>${y2} VS ${y1}</h3>
-    <p>ปี ${y1} ใช้จ่ายรวม <strong>${money(y1Exp)}</strong> (ปี ${y2} ใช้จ่าย <strong>${money(y2Exp)}</strong>)</p>
+    <h3>${esc(y2)} VS ${esc(y1)}</h3>
+    <p>ปี ${esc(y1)} ใช้จ่ายรวม <strong>${money(y1Exp)}</strong> (ปี ${esc(y2)} ใช้จ่าย <strong>${money(y2Exp)}</strong>)</p>
     <p>แนวโน้มค่าใช้จ่าย: <strong class="${diffPct > 0 ? 'exp' : 'inc'}">${diffPct > 0 ? '+' : ''}${diffPct}%</strong> จากปีเปรียบเทียบ</p>
   `;
 }
@@ -577,7 +585,7 @@ function renderSettings() {
       </div>
       <p>${money(g.currentAmount)} / ${money(g.targetAmount)} (${pct}%)</p>
       <div class="progress-bar"><div class="fill" style="width:${pct}%"></div></div>
-      <small>กำหนดเดดไลน์: ${g.deadline}</small>
+      <small>กำหนดเดดไลน์: ${esc(g.deadline)}</small>
     </div>`;
   }).join("") || `<p class="muted">ยังไม่มีเป้าหมายการเงิน</p>`;
 
@@ -793,9 +801,14 @@ document.addEventListener("DOMContentLoaded", () => {
     reader.readAsText(file);
   });
 
-  // Theme
+  // Theme Sync & Init
   const savedTheme = localStorage.getItem(THEME_KEY);
-  if (savedTheme === "dark") document.body.classList.add("dark");
+  if (savedTheme === "dark") {
+    document.body.classList.add("dark");
+    if ($("themeBtn")) $("themeBtn").textContent = "☀️ เปลี่ยนเป็นธีมสว่าง";
+  } else {
+    if ($("themeBtn")) $("themeBtn").textContent = "☾ เปลี่ยนเป็นธีมมืด";
+  }
 
   $("themeBtn").addEventListener("click", () => {
     document.body.classList.toggle("dark");
