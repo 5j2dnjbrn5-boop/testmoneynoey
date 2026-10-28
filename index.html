@@ -15,7 +15,7 @@
   <!-- Firebase SDK Compat -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div class="app-layout">
@@ -23,7 +23,7 @@
   <!-- Top App Bar -->
   <header class="topbar">
     <div>
-      <div class="eyebrow">MONEYSYNC OS</div>
+      <div class="eyebrow">MONEYSYNC</div>
       <h1 id="pageTitle">🏠 หน้าหลัก</h1>
     </div>
     <div class="topbar-actions">
@@ -35,51 +35,51 @@
     
     <!-- Tab 1: Dashboard -->
     <section id="tab-dashboard" class="tab-content active">
-      <div id="summaryCardContainer" class="summary-card-container">
-        <div class="cards">
-          <div class="card balance">
-            <span>ยอดเงินรวมทุกบัญชี</span>
-            <strong id="totalBalance">฿0.00</strong>
-          </div>
-          <div class="card income">
-            <span>รายรับเดือนนี้</span>
-            <strong id="incThisMonth">฿0.00</strong>
-          </div>
-          <div class="card expense">
-            <span>รายจ่ายเดือนนี้</span>
-            <strong id="expThisMonth">฿0.00</strong>
-          </div>
-        </div>
+      <div class="month-nav">
+        <button id="monthPrev" aria-label="เดือนก่อนหน้า">‹</button>
+        <span id="monthLabel"></span>
+        <button id="monthNext" aria-label="เดือนถัดไป">›</button>
       </div>
 
-      <!-- Quick Add / Smart Add Input -->
-      <div class="panel smart-add-panel">
-        <div class="panel-head"><h2>⚡ Smart Quick Add</h2></div>
+      <div class="hero">
+        <span class="hero-label">ยอดเงินคงเหลือ (ทุกบัญชี)</span>
+        <strong class="hero-amount" id="totalBalance">฿0.00</strong>
+        <div class="hero-row">
+          <div><span>↑ รายรับเดือนนี้</span><b class="inc" id="incThisMonth">฿0.00</b></div>
+          <div><span>↓ รายจ่ายเดือนนี้</span><b class="exp" id="expThisMonth">฿0.00</b></div>
+        </div>
+        <div class="hero-flow"><span>กระแสเงินสุทธิของเดือน</span><b id="cashFlowNet">฿0.00</b></div>
+      </div>
+
+      <div id="dashboardInsights"></div>
+
+      <div class="sec">
+        <h2>เพิ่มรายการด่วน</h2>
         <div class="smart-input-group">
-          <input id="smartInput" placeholder="พิมพ์เช่น 'ข้าว 60' หรือ 'เงินเดือน 25000'">
+          <input id="smartInput" placeholder="เช่น ข้าว 60 หรือ เงินเดือน 25000" aria-label="พิมพ์ชื่อรายการและจำนวนเงิน">
           <button id="smartAddBtn" class="primary">เพิ่ม</button>
         </div>
-        <p class="muted-sm">พิมพ์ชื่อรายการตามด้วยจำนวนเงิน ระบบจะจำแนกประเภทและหมวดหมู่อัตโนมัติ</p>
+        <div id="smartChips" class="chips"></div>
       </div>
 
-      <!-- Wallet Overview -->
-      <div class="panel">
-        <div class="panel-head"><h2>💳 บัญชีการเงิน (Wallets)</h2></div>
+      <div class="sec">
+        <h2>บัญชี</h2>
         <div id="walletList" class="wallet-grid"></div>
       </div>
 
-      <!-- Insights Summary -->
-      <div class="panel">
-        <div class="panel-head"><h2>💡 Financial Insights</h2></div>
-        <div id="dashboardInsights" class="insights-box"></div>
+      <div class="sec">
+        <div class="sec-head"><h2>รายจ่ายเดือนนี้</h2><button class="link-btn" data-act="cat-all">ดูทั้งหมด →</button></div>
+        <div id="donutChart"></div>
       </div>
 
-      <!-- Recent Transactions -->
-      <div class="panel">
-        <div class="panel-head">
-          <h2>📝 รายการล่าสุด</h2>
-          <button onclick="switchTab('history')" class="link-btn">ดูทั้งหมด →</button>
-        </div>
+      <div class="sec">
+        <h2>กระแสเงิน</h2>
+        <div id="flowCompact"></div>
+        <details id="flowDetails" class="flow-details"><summary>ดูผังกระแสเงินเต็ม →</summary><div id="cashFlowChart"></div></details>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head"><h2>รายการล่าสุด</h2><button class="link-btn" onclick="switchTab('history')">ดูทั้งหมด →</button></div>
         <div id="recentTxList"></div>
       </div>
     </section>
@@ -87,7 +87,8 @@
     <!-- Tab 2: Add Transaction Form -->
     <section id="tab-add" class="tab-content">
       <div class="panel">
-        <div class="panel-head"><h2 id="formTxTitle">➕ บันทึกรายการ</h2></div>
+        <div class="sheet-grip"></div>
+        <div class="panel-head"><h2 id="formTxTitle">เพิ่มรายการ</h2><button type="button" id="sheetClose" class="icon-btn" aria-label="ปิด">✕</button></div>
         <form id="txForm">
           <input type="hidden" id="txId">
           <div class="type-switch">
@@ -100,7 +101,8 @@
           <label>บัญชีการเงิน<select id="walletSelect"></select></label>
           <label>วันที่ทำรายการ<input id="date" type="date" required></label>
           <label>รายละเอียดเพิ่มเติม<input id="note" maxlength="120" placeholder="ระบุเพิ่มเติม..."></label>
-          <button class="primary" type="submit">💾 บันทึกรายการ</button>
+          <button class="primary" type="submit">บันทึกรายการ</button>
+          <button type="button" id="txDeleteBtn" class="danger-btn hidden">ลบรายการนี้</button>
         </form>
       </div>
     </section>
@@ -109,7 +111,7 @@
     <section id="tab-history" class="tab-content">
       <div class="panel">
         <div class="panel-head">
-          <h2>📚 ประวัติการเงิน</h2>
+          <h2>ประวัติการเงิน</h2>
           <div class="sub-nav">
             <button id="viewListBtn" class="active-sub">รายปี/เดือน</button>
             <button id="viewCalBtn">ปฏิทิน</button>
@@ -144,7 +146,7 @@
 
       <!-- Advanced Filters & Universal Search -->
       <div class="panel">
-        <div class="panel-head"><h2>🔍 ค้นหาและกรองข้อมูลแบบละเอียด</h2></div>
+        <div class="panel-head"><h2>ค้นหาและกรองข้อมูลแบบละเอียด</h2></div>
         <div class="filter-grid">
           <input id="searchKeyword" placeholder="🔍 ค้นหาชื่อ/โน้ต/หมวดหมู่...">
           <select id="filterType">
@@ -166,13 +168,62 @@
 
     <!-- Tab 4: Analytics -->
     <section id="tab-analytics" class="tab-content">
+      <div class="seg" id="analyticsSeg" role="tablist">
+        <button data-view="year" class="active-sub" role="tab">📅 รายปี</button>
+        <button data-view="shop" role="tab">👕 กำไรร้านค้า</button>
+      </div>
+      <div id="anaYear">
       <div class="panel">
-        <div class="panel-head"><h2>📊 วิเคราะห์รายปี & เปรียบเทียบปี</h2></div>
+        <div class="panel-head"><h2>วิเคราะห์รายปี & เปรียบเทียบปี</h2></div>
         <div class="year-selector-bar">
           <label>ปีเป้าหมาย: <select id="analyticsYearSelect"></select></label>
           <label>เปรียบเทียบกับปี: <select id="compareYearSelect"></select></label>
         </div>
         <div id="comparisonReport" class="comparison-card" style="margin-top: 12px;"></div>
+      </div>
+      </div>
+      <div id="anaShop" class="hidden">
+      <div class="panel">
+        <div class="panel-head"><h2>สรุปกำไร-ขาดทุนร้านค้า</h2></div>
+        <div class="year-selector-bar">
+          <label>ปี<select id="shopYear"></select></label>
+          <label>เดือน<select id="shopMonth"></select></label>
+        </div>
+        <p class="muted-sm" style="margin: 0 0 12px;">ระบบนับให้อัตโนมัติจาก <b>หมวดหมู่</b> หรือ <b>คำในชื่อรายการ</b> เช่น "ลงของ" = ต้นทุนสินค้า, "จัดร้าน/ค่าล็อค" = ค่าตั้งร้าน, "ขาย..." = ยอดขาย (แก้คำได้ที่ด้านล่าง)</p>
+        <div id="shopKpis" class="kpi-grid"></div>
+        <div id="shopInsight" class="insights-box"></div>
+      </div>
+      <div class="panel"><div class="panel-head"><h2>ยอดขาย vs ซื้อสต็อก รายเดือน</h2></div><div id="shopChart"></div></div>
+      <div class="panel"><div class="panel-head"><h2>รายการขายดี</h2></div><div id="shopTopSales"></div></div>
+      <div class="panel"><div class="panel-head"><h2>ซื้อสต็อกมากสุด</h2></div><div id="shopTopStock"></div></div>
+      <div class="panel"><div class="panel-head"><h2>ค่าตั้งร้าน/ค่าขนส่ง ตามรายการ</h2></div><div id="shopTopOther"></div></div>
+      <div class="panel"><div class="panel-head"><h2>วันไหนขายดี</h2></div><div id="shopWeekday"></div></div>
+
+      <details class="panel" id="rulesBox">
+        <summary><b>🔎 คำที่ใช้จับรายการ (แก้ได้)</b></summary>
+        <p class="muted-sm">ถ้าชื่อรายการมีคำเหล่านี้ ระบบจะนับเข้ากลุ่มนั้นให้ แม้เลือกหมวดหมู่อื่นไว้ — คั่นแต่ละคำด้วยเครื่องหมายคอมมา (,)</p>
+        <div class="rules-form">
+          <label>ยอดขาย (รายรับ)<input id="ruleSales"></label>
+          <label>ต้นทุนสินค้า / ลงของ (รายจ่าย)<input id="ruleStock"></label>
+          <label>ค่าตั้งร้าน / ค่าล็อค (รายจ่าย)<input id="ruleSetup"></label>
+          <label>ค่าขนส่ง / แพ็กของ (รายจ่าย)<input id="ruleShip"></label>
+          <div class="backup-actions"><button type="button" id="rulesSaveBtn" class="primary">💾 บันทึกคำค้นหา</button><button type="button" id="rulesResetBtn" class="secondary">↺ คืนค่าเริ่มต้น</button></div>
+        </div>
+      </details>
+
+      <div class="panel">
+        <div class="panel-head"><h2>ลูกหนี้ / เจ้าหนี้</h2></div>
+        <div id="debtSummary"></div>
+        <form id="debtForm" style="margin-top: 12px;">
+          <label>ชื่อลูกค้า / ร้านส่ง<input id="dWho" maxlength="60" required></label>
+          <label>ประเภท<select id="dKind"><option value="receivable">ลูกค้าค้างจ่ายเรา</option><option value="payable">เราค้างจ่ายร้านส่ง</option></select></label>
+          <label>จำนวนเงิน (บาท)<input id="dAmount" type="number" min="0.01" step="0.01" required></label>
+          <label>วันกำหนดชำระ (ไม่บังคับ)<input id="dDue" type="date"></label>
+          <label>หมายเหตุ<input id="dNote" maxlength="120"></label>
+          <button class="primary" type="submit">➕ เพิ่มรายการค้างชำระ</button>
+        </form>
+        <div id="debtList" style="margin-top: 14px;"></div>
+      </div>
       </div>
     </section>
 
@@ -181,21 +232,23 @@
       
       <!-- Cloud Sync (Firebase) -->
       <div class="panel">
-        <div class="panel-head"><h2>☁️ Cloud Sync (Firebase)</h2></div>
+        <div class="panel-head"><h2>Cloud Sync (Firebase)</h2></div>
         <div class="sync-status-box">
           <div id="syncStatusText">สถานะ: 🟡 ใช้ข้อมูลในเครื่อง (Offline Mode)</div>
           <small class="muted-sm">บันทึกลงเครื่องทันที และจะ Auto-Sync ไปยัง Firebase Cloud เมื่อมีการเปลี่ยนแปลงข้อมูล</small>
+          <div id="accountInfo" class="muted-sm"></div>
         </div>
         <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
           <button id="syncNowBtn" class="primary" style="flex:1;">🔄 ซิงค์ข้อมูลเดี๋ยวนี้</button>
           <button id="pullCloudBtn" class="secondary" style="flex:1;">📥 ดึงข้อมูลล่าสุดจาก Cloud</button>
           <button id="googleLoginBtn" class="secondary" style="flex-basis:100%;">🔐 ล็อกอินด้วย Google (ซิงค์ข้ามเครื่อง)</button>
+          <button id="logoutBtn" class="secondary hidden" style="flex-basis:100%;">🚪 ออกจากระบบ</button>
         </div>
       </div>
 
       <!-- Budget Management -->
       <div class="panel">
-        <div class="panel-head"><h2>💰 จัดการงบประมาณ (Budget)</h2></div>
+        <div class="panel-head"><h2>จัดการงบประมาณ (Budget)</h2></div>
         <form id="budgetForm" class="row-form">
           <select id="budgetCategorySelect"></select>
           <input type="number" id="budgetAmount" min="1" step="0.01" placeholder="งบประมาณ (บาท)" required>
@@ -206,7 +259,7 @@
 
       <!-- Financial Goals -->
       <div class="panel">
-        <div class="panel-head"><h2>🎯 เป้าหมายการเงิน (Goals)</h2></div>
+        <div class="panel-head"><h2>เป้าหมายการเงิน (Goals)</h2></div>
         <form id="goalForm">
           <label>ชื่อเป้าหมาย<input id="goalTitle" placeholder="เช่น ซื้อรถ, เงินสำรอง" required></label>
           <label>จำนวนเงินเป้าหมาย<input id="goalTarget" type="number" min="1" step="0.01" required></label>
@@ -219,7 +272,7 @@
 
       <!-- Recurring Transactions -->
       <div class="panel">
-        <div class="panel-head"><h2>🔄 รายการประจำ (Recurring)</h2></div>
+        <div class="panel-head"><h2>รายการประจำ (Recurring)</h2></div>
         <form id="recurringForm">
           <label>ชื่อรายการ<input id="recTitle" placeholder="เช่น Netflix, ค่าเช่าห้อง" required></label>
           <label>จำนวนเงิน<input id="recAmount" type="number" min="0.01" step="0.01" placeholder="จำนวนเงิน" required></label>
@@ -234,7 +287,7 @@
 
       <!-- Data Management & Backup -->
       <div class="panel">
-        <div class="panel-head"><h2>🛡️ สำรองข้อมูล & ความปลอดภัย</h2></div>
+        <div class="panel-head"><h2>สำรองข้อมูล & ความปลอดภัย</h2></div>
         <div class="backup-actions">
           <button id="exportJsonBtn" class="secondary">📥 Export JSON Backup</button>
           <button id="exportCsvBtn" class="secondary">📄 Export CSV (Excel)</button>
@@ -249,29 +302,17 @@
   </main>
 
   <!-- Bottom Navigation Bar for Mobile UI -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-tab="dashboard">
-      <span class="nav-icon">🏠</span>
-      <span class="nav-label">หน้าแรก</span>
-    </button>
-    <button class="nav-item" data-tab="history">
-      <span class="nav-icon">📚</span>
-      <span class="nav-label">ประวัติ</span>
-    </button>
-    <button class="nav-item add-tab-btn" data-tab="add">
-      <span class="nav-icon">+</span>
-    </button>
-    <button class="nav-item" data-tab="analytics">
-      <span class="nav-icon">📊</span>
-      <span class="nav-label">วิเคราะห์</span>
-    </button>
-    <button class="nav-item" data-tab="settings">
-      <span class="nav-icon">⚙️</span>
-      <span class="nav-label">ตั้งค่า</span>
-    </button>
+  <nav class="bottom-nav" aria-label="เมนูหลัก">
+    <button class="nav-item active" data-tab="dashboard"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span class="nav-label">หน้าแรก</span></button>
+    <button class="nav-item" data-tab="history"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span class="nav-label">ประวัติ</span></button>
+    <button class="nav-item add-tab-btn" data-tab="add" aria-label="เพิ่มรายการ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="nav-item" data-tab="analytics"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-9"/></svg><span class="nav-label">วิเคราะห์</span></button>
+    <button class="nav-item" data-tab="settings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h9m4 0h5M3 12h3m4 0h11M3 18h13m4 0h5"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="nav-label">ตั้งค่า</span></button>
   </nav>
 
 </div>
+
+<div id="sheetBackdrop" class="sheet-backdrop"></div>
 
 <!-- Toast Notification with Undo -->
 <div id="toast" class="toast" role="status" aria-live="polite">
